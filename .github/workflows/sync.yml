@@ -1,0 +1,35 @@
+name: Daily sync
+
+on:
+  schedule:
+    - cron: "15 11 * * *"   # 11:15 UTC daily (~6:15am Central). Adjust as you like.
+  workflow_dispatch:          # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pull Oura + Strava
+        env:
+          OURA_TOKEN: ${{ secrets.OURA_TOKEN }}
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          STRAVA_CLIENT_SECRET: ${{ secrets.STRAVA_CLIENT_SECRET }}
+          STRAVA_REFRESH_TOKEN: ${{ secrets.STRAVA_REFRESH_TOKEN }}
+        run: python sync.py
+
+      - name: Commit updated metrics
+        run: |
+          git config user.name "basecamp-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/metrics.json
+          git commit -m "sync metrics $(date -u +%F)" || echo "no changes"
+          git push
