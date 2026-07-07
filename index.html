@@ -288,6 +288,28 @@
   </section>
 
   <section class="card">
+    <h2>Movement · today</h2>
+    <div class="macros">
+      <div class="macro"><div class="n" id="acActive">—</div><div class="l">active kcal</div></div>
+      <div class="macro"><div class="n" id="acSteps">—</div><div class="l">steps</div></div>
+      <div class="macro"><div class="n" id="acTotal">—</div><div class="l">total burn</div></div>
+    </div>
+    <div class="fuel" id="acSource"></div>
+    <button class="btn ghost" id="logActToggle">+ Log an activity</button>
+    <div class="rideform" id="actForm">
+      <div><label>Type</label>
+        <select class="inp" id="aType">
+          <option>Walk</option><option>Yardwork</option><option>Pickleball</option>
+          <option>Play with kids</option><option>Hike</option><option>Sport / game</option><option>Other</option>
+        </select></div>
+      <div><label>Minutes</label><input class="inp" id="aMins" type="number" inputmode="numeric" placeholder="30"></div>
+      <div class="full"><label>Calories · optional (Oura est.)</label><input class="inp" id="aKcal" type="number" inputmode="numeric" placeholder="leave blank if unsure"></div>
+      <div class="full"><button class="btn" id="aSave" style="margin-top:0">Save activity</button></div>
+    </div>
+    <div class="list" id="actListToday"></div>
+  </section>
+
+  <section class="card">
     <h2>Log bodyweight</h2>
     <div class="wlog">
       <input class="inp" id="wInput" type="number" inputmode="decimal" placeholder="e.g. 208.4" step="0.1">
@@ -377,6 +399,12 @@
     <div class="list" id="rideList"></div>
   </section>
 
+  <section class="card">
+    <h2>Activity log · everything else</h2>
+    <div class="fuel" id="actWeek"></div>
+    <div class="list" id="actListAll"></div>
+  </section>
+
   <div class="toolbar">
     <button id="exportBtn">Export data</button>
     <button id="importBtn">Import data</button>
@@ -447,6 +475,7 @@ const defaults = {
   lifts:{},             // name -> {weight}
   sessions:[],          // saved sessions
   rides:[],             // {date, miles, mph, type}
+  activities:[],        // {date, type, mins, kcal}
   active:null,          // in-progress workout {day, exIdx, data:[[{w,reps,rpe,done}x3]...]}
   metrics:null
 };
@@ -720,7 +749,7 @@ $("restAdd").addEventListener("click",()=>{ restLeft+=15; paintRest(); });
 $("restSkip").addEventListener("click",stopRest);
 
 /* ---------- Progress ---------- */
-function renderProgress(){ renderProgWeight(); renderLifts(); renderHistory(); renderConditioning(); renderRides(); }
+function renderProgress(){ renderProgWeight(); renderLifts(); renderHistory(); renderConditioning(); renderRides(); renderActivities(); }
 
 function renderProgWeight(){
   const arr=S.bw.slice(-30);
@@ -794,6 +823,48 @@ $("rSave").addEventListener("click",()=>{
   save(); renderRides();
 });
 
+/* ---------- Activities / movement ---------- */
+function renderMovement(){
+  const m=S.metrics;
+  $("acActive").textContent = m&&m.activeCal!=null? m.activeCal : "—";
+  $("acSteps").textContent  = m&&m.steps!=null? Number(m.steps).toLocaleString() : "—";
+  $("acTotal").textContent  = m&&m.totalCal!=null? m.totalCal : "—";
+  $("acSource").innerHTML = (m&&m.activeCal!=null)
+    ? "<b>From your Oura ring</b> — already counts the gym walk, yardwork, pickleball, chasing kids, all of it."
+    : "Oura movement fills in once today's data syncs. Log activities below to keep your own record.";
+  renderActToday();
+}
+function actItem(a){
+  const d=new Date(a.date+"T12:00").toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const meta=[d, a.mins?a.mins+" min":null].filter(Boolean).join(" · ");
+  return `<div class="li"><div class="lmain"><div class="lt">${a.type}</div><div class="ls">${meta}</div></div>
+    <div class="lr">${a.kcal? a.kcal+" kcal" : "logged"}</div></div>`;
+}
+function renderActToday(){
+  const today=new Date().toISOString().slice(0,10);
+  const arr=S.activities.filter(a=>a.date===today).reverse();
+  $("actListToday").innerHTML = arr.length? arr.map(actItem).join("") : "";
+}
+function renderActivities(){
+  const list=$("actListAll");
+  if(!S.activities.length){
+    list.innerHTML='<div class="empty">No activities logged yet. Walks, yardwork, pickleball, play — add them on the Today tab.</div>';
+    $("actWeek").innerHTML=""; return;
+  }
+  list.innerHTML = S.activities.slice().reverse().slice(0,30).map(actItem).join("");
+  const cut=new Date(Date.now()-7*864e5).toISOString().slice(0,10);
+  const wk=S.activities.filter(a=>a.date>=cut);
+  const kcal=wk.reduce((n,a)=>n+(+a.kcal||0),0);
+  $("actWeek").innerHTML="<b>Last 7 days:</b> "+wk.length+" activit"+(wk.length===1?"y":"ies")+(kcal?" · ~"+kcal+" kcal logged":"");
+}
+$("logActToggle").addEventListener("click",()=>$("actForm").classList.toggle("on"));
+$("aSave").addEventListener("click",()=>{
+  const mins=+$("aMins").value, kcal=+$("aKcal").value;
+  S.activities.push({date:new Date().toISOString().slice(0,10), type:$("aType").value, mins:mins||0, kcal:kcal||0});
+  $("aMins").value=""; $("aKcal").value=""; $("actForm").classList.remove("on");
+  save(); renderMovement(); renderActivities();
+});
+
 /* ---------- Bodyweight quick log ---------- */
 $("wSave").addEventListener("click",()=>{
   const v=+($("wInput").value); if(!v) return;
@@ -835,12 +906,12 @@ async function loadMetrics(){
     if(S.metrics){ $("foot").textContent="offline · cached data"; $("foot").classList.add("stale"); }
     else{ $("foot").textContent="local · offline-ready"; }
   }
-  renderReadiness();
+  renderReadiness(); renderMovement();
 }
 
 /* ---------- Boot ---------- */
 function renderAll(){
-  renderHeader(); renderReadiness(); renderNextUp(); renderWeek(); renderNutrition(); renderBodyweight();
+  renderHeader(); renderReadiness(); renderNextUp(); renderWeek(); renderNutrition(); renderMovement(); renderBodyweight();
 }
 renderAll();
 loadMetrics();

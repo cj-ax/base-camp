@@ -39,7 +39,8 @@ def _post(url, data):
 
 def fetch_oura():
     token = os.environ.get("OURA_TOKEN")
-    out = {"readiness": None, "sleep": None, "hrv": None, "rhr": None}
+    out = {"readiness": None, "sleep": None, "hrv": None, "rhr": None,
+           "activeCal": None, "totalCal": None, "steps": None}
     if not token:
         return out
     hdr = {"Authorization": f"Bearer {token}"}
@@ -60,6 +61,13 @@ def fetch_oura():
             last = d[-1]
             out["hrv"] = last.get("average_hrv")
             out["rhr"] = last.get("lowest_heart_rate")
+        # daily activity: caloric burn + steps (captures walks, yardwork, play, etc.)
+        a = _get(f"{base}/daily_activity?{q}", hdr).get("data", [])
+        if a:
+            last = a[-1]
+            out["activeCal"] = last.get("active_calories")
+            out["totalCal"] = last.get("total_calories")
+            out["steps"] = last.get("steps")
     except urllib.error.HTTPError as e:
         print(f"[oura] HTTP {e.code}: {e.read().decode()[:200]}", file=sys.stderr)
     except Exception as e:
