@@ -1,9 +1,8 @@
 {
-  "updated": "2026-07-07 06:10",
-  "readiness": 82,
-  "sleep": 79,
+  "updated": "2026-07-07 19:51",
+  "readiness": 85,
+  "sleep": 86,
   "hrv": 61,
-  "rhr": 54,
-  "weight": null,
-  "lastRide": "18.4 mi · 15.6 mph"
+  "rhr": 55,
+  "lastRide": null
 }
