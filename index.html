@@ -410,7 +410,7 @@
     <button id="importBtn">Import data</button>
     <button id="resetBtn">Reset inputs</button>
   </div>
-  <footer id="foot">local · offline-ready</footer>
+  <footer id="foot">local · offline-ready · v2026-07-07.4</footer>
 
 </div>
 
@@ -430,6 +430,21 @@
 </nav>
 
 <script>
+const BUILD = "2026-07-07.4";   // bump on each deploy; shown in footer
+
+/* ---------- Auto-update (service worker, network-first) ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      reg.update();
+      let reloading = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloading) return; reloading = true; location.reload();
+      });
+    }).catch(() => {});
+  });
+}
+
 /* ---------- Program ---------- */
 const PROGRAM = {
   A: {label:"Squat", ex:[
@@ -901,10 +916,10 @@ async function loadMetrics(){
   try{
     const r=await fetch("data/metrics.json?t="+Date.now(),{cache:"no-store"});
     if(r.ok){ const m=await r.json(); S.metrics=m; save();
-      $("foot").textContent="synced "+(m.updated||""); $("foot").classList.remove("stale"); }
+      $("foot").textContent="synced "+(m.updated||"")+" · v"+BUILD; $("foot").classList.remove("stale"); }
   }catch(e){
-    if(S.metrics){ $("foot").textContent="offline · cached data"; $("foot").classList.add("stale"); }
-    else{ $("foot").textContent="local · offline-ready"; }
+    if(S.metrics){ $("foot").textContent="offline · cached data · v"+BUILD; $("foot").classList.add("stale"); }
+    else{ $("foot").textContent="local · offline-ready · v"+BUILD; }
   }
   renderReadiness(); renderMovement();
 }
