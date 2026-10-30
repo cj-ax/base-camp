@@ -1,11 +1,11 @@
 {
-  "updated": "2026-10-29 17:26",
-  "readiness": 75,
-  "sleep": 74,
-  "hrv": 26,
-  "rhr": 58,
-  "activeCal": 135,
-  "totalCal": 2430,
-  "steps": 1949,
+  "updated": "2026-10-30 17:00",
+  "readiness": 76,
+  "sleep": 83,
+  "hrv": 37,
+  "rhr": 60,
+  "activeCal": 231,
+  "totalCal": 2486,
+  "steps": 3982,
   "lastRide": null
 }
